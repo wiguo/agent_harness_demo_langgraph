@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simple Agent Harness Demo</title>
+<style>
+* { box-sizing: border-box; margin: 0; }
+:root {
+  --bg: #f6f7f5; --panel: #fff; --ink: #22292f; --muted: #6b7480;
+  --line: #dfe3e0; --accent: #0f6b54; --accent-soft: #e3efeb;
+  --user: #eef1ee; --fail: #a33f2c;
+}
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 "Segoe UI", system-ui, sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding: 28px 16px 120px; }
+h1 { font-size: 22px; letter-spacing: -0.02em; }
+header p { color: var(--muted); margin-top: 4px; }
+#suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0; }
+#suggestions button { font-size: 12.5px; padding: 5px 10px; border: 1px solid var(--line);
+  border-radius: 999px; background: var(--panel); color: var(--ink); cursor: pointer; }
+#suggestions button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+#suggestions button:disabled { opacity: .5; cursor: default; }
+#transcript { display: flex; flex-direction: column; gap: 12px; }
+.msg { padding: 12px 14px; border-radius: 10px; }
+.msg.user { background: var(--user); align-self: flex-end; max-width: 85%; }
+.msg.assistant { background: var(--panel); border: 1px solid var(--line); }
+.answer { white-space: pre-wrap; }
+.trail { margin-bottom: 8px; }
+.chip { display: inline-block; font-size: 11.5px; padding: 2px 8px; margin: 0 4px 4px 0;
+  border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.chip.step { background: #eceff1; color: var(--muted); }
+.chip.failed { background: #f7e8e3; color: var(--fail); }
+.chip.thinking { background: #fff6dc; color: #7a6210; }
+.preview { font-size: 12px; color: var(--muted); margin: 2px 0; overflow-x: auto; }
+.preview code { font-size: 11.5px; }
+.stopreason { margin-top: 6px; font-size: 12px; color: var(--fail); }
+form { position: fixed; bottom: 0; left: 0; right: 0; display: flex; gap: 8px;
+  max-width: 760px; margin: 0 auto; padding: 14px 16px 20px;
+  background: linear-gradient(transparent, var(--bg) 30%); }
+form input { flex: 1; padding: 11px 14px; font: inherit; border: 1px solid var(--line);
+  border-radius: 10px; background: var(--panel); color: var(--ink); }
+form input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+form button { padding: 11px 20px; font: inherit; border: 0; border-radius: 10px;
+  background: var(--accent); color: #fff; cursor: pointer; }
+form button:disabled { opacity: .5; cursor: default; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Simple Agent Harness Demo</h1>
+    <p>Ask about <strong>policy</strong> (3 documents) or <strong>numbers</strong> (24
+      complaint cases). One loop, two tools — the model decides.</p>
+  </header>
+  <div id="suggestions"></div>
+  <section id="transcript"></section>
+</main>
+<form id="form">
+  <input id="input" placeholder="Ask about policy or the case data…" autofocus autocomplete="off">
+  <button id="send" type="submit">Send</button>
+</form>
+
+<script>
+const SUGGESTIONS = [
+  "What is the complaint escalation process?",
+  "How long are complaint records retained?",
+  "How many complaints did we get in July?",
+  "What is the most common complaint category?",
+  "Average resolution time by channel?",
+  "What are the top complaint categories, and what do our guidelines say about handling them?",
+  "What's our average refund amount?",
+  "Who is the CEO?",
+];
+
+const history = [];  // {role, content} — the server is stateless, we hold state
+let busy = false;
+
+const $ = (id) => document.getElementById(id);
+const transcript = $("transcript");
+
+for (const q of SUGGESTIONS) {
+  const b = document.createElement("button");
+  b.textContent = q;
+  b.onclick = () => send(q);
+  $("suggestions").appendChild(b);
+}
+
+$("form").onsubmit = (e) => { e.preventDefault(); send($("input").value); };
+
+function setBusy(value) {
+  busy = value;
+  $("send").disabled = value;
+  $("input").disabled = value;
+  for (const b of $("suggestions").children) b.disabled = value;
+}
+
+function chip(text, cls) {
+  const s = document.createElement("span");
+  s.className = "chip " + cls;
+  s.textContent = text;
+  return s;
+}
+
+function renderEvent(trail, e) {
+  if (e.type === "step") {
+    trail.appendChild(chip(`step ${e.step}` +
+      (e.usage?.total_tokens ? ` · ${e.usage.total_tokens} tok` : ""), "step"));
+  } else if (e.type === "tool") {
+    const icon = e.name === "search_documents" ? "🔎" : "📊";
+    trail.appendChild(chip(`${icon} ${e.name}${e.ok ? "" : " ⚠"}`, e.ok ? "" : "failed"));
+    const p = document.createElement("div");
+    p.className = "preview";
+    p.innerHTML = `<code></code> → `;
+    p.querySelector("code").textContent = `${e.name}(${JSON.stringify(e.args)})`;
+    p.appendChild(document.createTextNode(e.preview));
+    trail.appendChild(p);
+  }
+}
+
+async function send(text) {
+  const question = text.trim();
+  if (!question || busy) return;
+  setBusy(true);
+  $("input").value = "";
+  history.push({ role: "user", content: question });
+
+  const userDiv = document.createElement("div");
+  userDiv.className = "msg user";
+  userDiv.textContent = question;
+  transcript.appendChild(userDiv);
+
+  const msgDiv = document.createElement("div");
+  msgDiv.className = "msg assistant";
+  const trail = document.createElement("div");
+  trail.className = "trail";
+  const thinking = chip("thinking…", "thinking");
+  trail.appendChild(thinking);
+  msgDiv.appendChild(trail);
+  transcript.appendChild(msgDiv);
+
+  let finalEvent = null;
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: history }),
+    });
+    if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const e = JSON.parse(line);
+        if (e.type === "final") finalEvent = e;
+        else if (e.type === "error") finalEvent = { content: e.message, stop_reason: "error" };
+        else { trail.insertBefore(document.createElement("span"), thinking); renderEvent(trail, e); trail.appendChild(thinking); }
+      }
+      msgDiv.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  } catch (err) {
+    finalEvent = { content: `Request failed: ${err.message}`, stop_reason: "error" };
+  }
+
+  thinking.remove();
+  const answer = document.createElement("div");
+  answer.className = "answer";
+  answer.textContent = finalEvent?.content ?? "(no answer)";
+  msgDiv.appendChild(answer);
+  if (finalEvent?.stop_reason && finalEvent.stop_reason !== "answer") {
+    const s = document.createElement("div");
+    s.className = "stopreason";
+    s.textContent = "stopped: " + finalEvent.stop_reason;
+    msgDiv.appendChild(s);
+  }
+  history.push({ role: "assistant", content: finalEvent?.content ?? "" });
+  setBusy(false);
+  msgDiv.scrollIntoView({ behavior: "smooth", block: "end" });
+}
+</script>
+</body>
+</html>
