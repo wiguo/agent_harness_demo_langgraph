@@ -2,8 +2,10 @@
 
 A GenAI assistant for internal enterprise users that answers questions across two data
 shapes — **policy documents** and **operational case data** — through one agent loop with
-an explicit harness, built on LangGraph. Design spec in [`docs/SPEC.md`](docs/SPEC.md);
-build process and lessons in [`docs/BUILD-NOTES.md`](docs/BUILD-NOTES.md).
+an explicit harness, built on LangGraph.
+**Live demo: [agent-harness-demo-langgraph.vercel.app](https://agent-harness-demo-langgraph.vercel.app)** ·
+Design spec in [`docs/SPEC.md`](docs/SPEC.md) · build process and lessons in
+[`docs/BUILD-NOTES.md`](docs/BUILD-NOTES.md).
 
 ## Problem statement
 
