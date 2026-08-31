@@ -1,0 +1,25 @@
+case_id,date,category,channel,sentiment,resolution_hours,region,status
+NW-1001,2026-07-02,Billing,Email,negative,36,North,resolved
+NW-1002,2026-07-03,Delivery,Phone,negative,18,South,resolved
+NW-1003,2026-07-05,Billing,Email,neutral,52,East,closed
+NW-1004,2026-07-08,Product Quality,Chat,negative,30,West,resolved
+NW-1005,2026-07-09,Service,Phone,neutral,12,North,closed
+NW-1006,2026-07-11,Billing,Web Form,negative,60,South,closed
+NW-1007,2026-07-14,Delivery,Email,negative,24,East,resolved
+NW-1008,2026-07-16,Data/Privacy,Email,negative,20,West,closed
+NW-1009,2026-07-18,Product Quality,Phone,neutral,44,North,closed
+NW-1010,2026-07-21,Service,Chat,positive,8,South,resolved
+NW-1011,2026-07-23,Billing,Email,negative,40,East,resolved
+NW-1012,2026-07-26,Delivery,Web Form,neutral,28,West,resolved
+NW-1013,2026-07-29,Service,Email,negative,16,North,closed
+NW-1014,2026-08-01,Product Quality,Email,negative,34,South,resolved
+NW-1015,2026-08-03,Billing,Phone,negative,48,East,resolved
+NW-1016,2026-08-05,Delivery,Chat,neutral,22,West,resolved
+NW-1017,2026-08-07,Service,Phone,neutral,10,North,resolved
+NW-1018,2026-08-10,Billing,Email,negative,,South,open
+NW-1019,2026-08-12,Product Quality,Web Form,negative,38,East,resolved
+NW-1020,2026-08-14,Data/Privacy,Email,negative,,West,open
+NW-1021,2026-08-17,Service,Chat,positive,6,South,resolved
+NW-1022,2026-08-19,Delivery,Phone,negative,,North,open
+NW-1023,2026-08-21,Billing,Chat,neutral,26,East,resolved
+NW-1024,2026-08-24,Product Quality,Phone,negative,,West,open
